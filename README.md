@@ -15,15 +15,16 @@ Pitchside is a GenAI-powered stadium companion with two connected parts:
 
 ## How GenAI is used
 
-- The `/api/chat` endpoint sends each user question to Google's **Gemini API** with a system prompt that defines Pitchside's role, current mode (fan / staff / accessibility), and target language.
+- The `/api/chat` endpoint sends each user question to **Groq's Llama 3.3 70B** with a system prompt that defines Pitchside's role, current mode (fan / staff / accessibility), and target language.
 - The model generates the actual answer — translation, tone adaptation, and wayfinding logic are all handled by the GenAI call, not hardcoded rules.
-- This is a genuine runtime dependency: without a valid `GEMINI_API_KEY`, the assistant does not function.
+- This is a genuine runtime dependency: without a valid `GROQ_API_KEY`, the assistant does not function.
 
 ## Tech Stack
 
-- **Frontend**: HTML, CSS, vanilla JavaScript
-- **Backend**: Node.js, Express (keeps the API key server-side, never exposed to the browser)
-- **GenAI**: Google Gemini API (`gemini-2.0-flash`) — free tier via Google AI Studio, no GCP billing required
+- **Frontend**: HTML, CSS, vanilla JavaScript — semantic landmarks, ARIA labels/roles, keyboard-operable controls, visible focus states, skip link
+- **Backend**: Node.js, Express — Helmet security headers, rate limiting (20 req/min per client), gzip compression, strict input validation
+- **GenAI**: Groq API running Llama 3.3 70B — free developer tier, no credit card required
+- **Testing**: Jest + Supertest — automated tests for input validation, rate limiting, and route availability
 
 ## Setup & Run Locally
 
@@ -31,15 +32,21 @@ Pitchside is a GenAI-powered stadium companion with two connected parts:
 # 1. Install dependencies
 npm install
 
-# 2. Add your Gemini API key
+# 2. Add your Groq API key
 cp .env.example .env
-# then edit .env and paste your key from https://aistudio.google.com/apikey
+# then edit .env and paste your key from https://console.groq.com/keys
 
 # 3. Start the server
 npm start
 
 # 4. Open the app
 # http://localhost:3000
+```
+
+## Running Tests
+
+```bash
+npm test
 ```
 
 ## Project Structure
