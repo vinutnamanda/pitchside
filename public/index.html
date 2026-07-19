@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Pitchside — Stadium Companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Teko:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --night: #0A1912;
+    --night-2: #0F2419;
+    --turf: #2E7D46;
+    --turf-light: #4FA868;
+    --floodlight: #F5F7F2;
+    --amber: #F2B705;
+    --alert: #E85D4E;
+    --muted: #8FA396;
+    --line: rgba(245,247,242,0.12);
+    --radius: 4px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background: var(--night);
+    color: var(--floodlight);
+    font-family: 'Inter', sans-serif;
+    line-height: 1.5;
+    min-height:100vh;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace; letter-spacing:0.02em;}
+  .display{font-family:'Teko', sans-serif; font-weight:600; text-transform:uppercase; letter-spacing:0.02em;}
+
+  /* Pitch line texture backdrop */
+  .pitch-lines{
+    position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0.05;
+    background-image:
+      repeating-linear-gradient(90deg, var(--floodlight) 0px, var(--floodlight) 1px, transparent 1px, transparent 120px);
+  }
+
+  header{
+    position:sticky; top:0; z-index:20;
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 18px 32px;
+    background: rgba(10,25,18,0.85);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:10px;}
+  .brand-mark{
+    width:14px; height:14px; border-radius:50%;
+    background: var(--amber);
+    box-shadow: 0 0 0 3px rgba(242,183,5,0.15), 0 0 12px rgba(242,183,5,0.5);
+  }
+  .brand-name{font-size:1.4rem; letter-spacing:0.06em;}
+  nav{display:flex; gap:28px;}
+  nav a{color:var(--muted); text-decoration:none; font-size:0.85rem; letter-spacing:0.04em; text-transform:uppercase; transition:color 0.2s;}
+  nav a:hover{color:var(--floodlight);}
+  .lang-select{
+    background: var(--night-2); color:var(--floodlight); border:1px solid var(--line);
+    border-radius: var(--radius); padding:8px 12px; font-family:'IBM Plex Mono',monospace; font-size:0.8rem;
+  }
+
+  /* HERO */
+  .hero{
+    position:relative; z-index:1;
+    padding: 90px 32px 70px;
+    max-width: 1180px; margin: 0 auto;
+    display:grid; grid-template-columns: 1.1fr 0.9fr; gap:48px; align-items:center;
+  }
+  .kicker{
+    font-family:'IBM Plex Mono', monospace; font-size:0.78rem; color:var(--amber);
+    letter-spacing:0.14em; text-transform:uppercase; margin-bottom:18px;
+    display:flex; align-items:center; gap:10px;
+  }
+  .kicker::before{content:''; width:24px; height:1px; background:var(--amber);}
+  .hero h1{
+    font-size: clamp(3rem, 6vw, 5.4rem); line-height:0.92; margin-bottom:22px;
+  }
+  .hero h1 span{color:var(--turf-light);}
+  .hero p{ color:var(--muted); font-size:1.05rem; max-width:46ch; margin-bottom:30px;}
+  .cta-row{display:flex; gap:14px; flex-wrap:wrap;}
+  .btn{
+    font-family:'Inter',sans-serif; font-weight:600; font-size:0.9rem;
+    padding:14px 26px; border-radius:var(--radius); cursor:pointer; border:none;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn-primary{background:var(--amber); color:var(--night);}
+  .btn-primary:hover{transform:translateY(-2px); box-shadow:0 6px 20px rgba(242,183,5,0.25);}
+  .btn-ghost{background:transparent; color:var(--floodlight); border:1px solid var(--line);}
+  .btn-ghost:hover{border-color:var(--floodlight);}
+
+  /* Scoreboard hero visual */
+  .board{
+    background: var(--night-2);
+    border:1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px;
+    position:relative;
+    overflow:hidden;
+  }
+  .board::before{
+    content:''; position:absolute; top:0; left:0; right:0; height:3px;
+    background: linear-gradient(90deg, var(--turf), var(--amber), var(--alert));
+  }
+  .board-row{display:flex; justify-content:space-between; align-items:baseline; padding:10px 0; border-bottom:1px dashed var(--line);}
+  .board-row:last-child{border-bottom:none;}
+  .board-label{font-size:0.72rem; color:var(--muted); text-transform:uppercase; letter-spacing:0.08em;}
+  .board-value{font-family:'IBM Plex Mono',monospace; font-size:1.1rem;}
+  .board-value.ok{color:var(--turf-light);}
+  .board-value.warn{color:var(--amber);}
+  .board-value.high{color:var(--alert);}
+  .pulse{display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:8px; animation:pulse 1.6s infinite;}
+  .pulse.ok{background:var(--turf-light);}
+  .pulse.warn{background:var(--amber);}
+  .pulse.high{background:var(--alert);}
+  @keyframes pulse{0%{opacity:1;} 50%{opacity:0.3;} 100%{opacity:1;}}
+
+  /* SECTIONS */
+  section{position:relative; z-index:1; max-width:1180px; margin:0 auto; padding: 70px 32px;}
+  .section-head{display:flex; align-items:baseline; gap:16px; margin-bottom:36px; border-bottom:1px solid var(--line); padding-bottom:18px;}
+  .section-num{font-family:'IBM Plex Mono',monospace; color:var(--amber); font-size:0.85rem;}
+  .section-head h2{font-size:2.2rem;}
+  .section-sub{color:var(--muted); margin-top:-24px; margin-bottom:36px; max-width:60ch;}
+
+  /* CHAT */
+  .chat-wrap{
+    display:grid; grid-template-columns: 1fr 300px; gap:24px;
+  }
+  .chat-panel{
+    background:var(--night-2); border:1px solid var(--line); border-radius:10px;
+    display:flex; flex-direction:column; height:560px;
+  }
+  .chat-log{flex:1; overflow-y:auto; padding:24px; display:flex; flex-direction:column; gap:16px;}
+  .msg{max-width:80%; padding:12px 16px; border-radius:8px; font-size:0.92rem; line-height:1.55;}
+  .msg.user{align-self:flex-end; background:var(--turf); color:var(--floodlight); border-bottom-right-radius:2px;}
+  .msg.bot{align-self:flex-start; background:rgba(245,247,242,0.06); border:1px solid var(--line); border-bottom-left-radius:2px;}
+  .msg.bot .tag{display:block; font-family:'IBM Plex Mono',monospace; font-size:0.68rem; color:var(--amber); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.08em;}
+  .chat-input-row{display:flex; gap:10px; padding:16px; border-top:1px solid var(--line);}
+  .chat-input-row input{
+    flex:1; background:var(--night); border:1px solid var(--line); border-radius:6px;
+    padding:12px 14px; color:var(--floodlight); font-family:'Inter',sans-serif; font-size:0.92rem;
+  }
+  .chat-input-row input:focus{outline:none; border-color:var(--turf-light);}
+  .chat-input-row button{background:var(--amber); color:var(--night); border:none; border-radius:6px; padding:0 20px; font-weight:600; cursor:pointer;}
+  .chat-input-row button:disabled{opacity:0.5; cursor:default;}
+
+  .side-panel{display:flex; flex-direction:column; gap:16px;}
+  .mode-card{
+    background:var(--night-2); border:1px solid var(--line); border-radius:10px; padding:18px;
+  }
+  .mode-card h4{font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:12px;}
+  .toggle-row{display:flex; align-items:center; justify-content:space-between; padding:8px 0;}
+  .toggle-row span{font-size:0.9rem;}
+  .switch{position:relative; width:40px; height:22px; background:var(--night); border:1px solid var(--line); border-radius:20px; cursor:pointer; flex-shrink:0;}
+  .switch::after{content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--muted); transition:all 0.2s;}
+  .switch.on{background:rgba(46,125,70,0.3); border-color:var(--turf-light);}
+  .switch.on::after{transform:translateX(18px); background:var(--turf-light);}
+  .quick-q{background:transparent; border:1px solid var(--line); color:var(--muted); border-radius:6px; padding:9px 12px; font-size:0.82rem; text-align:left; cursor:pointer; width:100%; margin-bottom:8px; transition:all 0.15s;}
+  .quick-q:hover{border-color:var(--amber); color:var(--floodlight);}
+
+  /* RADAR / CROWD MAP */
+  .radar-wrap{display:grid; grid-template-columns: 1.1fr 0.9fr; gap:24px;}
+  .radar-box{
+    background:var(--night-2); border:1px solid var(--line); border-radius:10px; padding:28px;
+    position:relative; height:420px; overflow:hidden;
+  }
+  .stadium-oval{
+    position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:82%; height:70%; border:2px solid rgba(245,247,242,0.15); border-radius:50%;
+  }
+  .stadium-oval::after{
+    content:''; position:absolute; inset:14%; border:1px dashed rgba(245,247,242,0.12); border-radius:50%;
+  }
+  .hotspot{position:absolute; width:14px; height:14px; border-radius:50%; transform:translate(-50%,-50%);}
+  .hotspot::after{content:''; position:absolute; inset:-8px; border-radius:50%; animation:ripple 2s infinite;}
+  .hotspot.ok{background:var(--turf-light);} .hotspot.ok::after{border:1px solid var(--turf-light);}
+  .hotspot.warn{background:var(--amber);} .hotspot.warn::after{border:1px solid var(--amber);}
+  .hotspot.high{background:var(--alert);} .hotspot.high::after{border:1px solid var(--alert);}
+  @keyframes ripple{0%{opacity:0.7; inset:-8px;} 100%{opacity:0; inset:-20px;}}
+  .radar-caption{position:absolute; bottom:16px; left:28px; font-family:'IBM Plex Mono',monospace; font-size:0.72rem; color:var(--muted);}
+
+  .report-log{background:var(--night-2); border:1px solid var(--line); border-radius:10px; padding:22px; display:flex; flex-direction:column;}
+  .report-log h4{font-size:0.78rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); margin-bottom:14px;}
+  .report-item{padding:10px 0; border-bottom:1px solid var(--line); font-size:0.85rem;}
+  .report-item:last-child{border-bottom:none;}
+  .report-item .loc{font-weight:600;}
+  .report-item .time{color:var(--muted); font-family:'IBM Plex Mono',monospace; font-size:0.72rem; float:right;}
+  .report-form{display:flex; gap:8px; margin-top:16px;}
+  .report-form input{flex:1; background:var(--night); border:1px solid var(--line); border-radius:6px; padding:10px 12px; color:var(--floodlight); font-size:0.85rem;}
+  .report-form button{background:transparent; border:1px solid var(--amber); color:var(--amber); border-radius:6px; padding:0 16px; cursor:pointer; font-weight:600; font-size:0.85rem;}
+
+  /* FEATURE GRID */
+  .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:22px;}
+  .feat{background:var(--night-2); border:1px solid var(--line); border-radius:10px; padding:26px;}
+  .feat .num{font-family:'IBM Plex Mono',monospace; color:var(--amber); font-size:0.8rem; margin-bottom:14px;}
+  .feat h3{font-size:1.3rem; margin-bottom:10px;}
+  .feat p{color:var(--muted); font-size:0.9rem;}
+
+  footer{
+    position:relative; z-index:1; border-top:1px solid var(--line); padding:32px; text-align:center;
+    color:var(--muted); font-size:0.8rem; font-family:'IBM Plex Mono',monospace;
+  }
+
+  @media (max-width: 860px){
+    .hero{grid-template-columns:1fr;}
+    .chat-wrap, .radar-wrap{grid-template-columns:1fr;}
+    .grid3{grid-template-columns:1fr;}
+    nav{display:none;}
+  }
+</style>
+</head>
+<body>
+
+<div class="pitch-lines"></div>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark"></div>
+    <div class="brand-name display">PITCHSIDE</div>
+  </div>
+  <nav>
+    <a href="#assistant">Assistant</a>
+    <a href="#ops">Live Ops</a>
+    <a href="#capabilities">Capabilities</a>
+  </nav>
+  <select class="lang-select" id="langSelect">
+    <option value="English">EN — English</option>
+    <option value="Spanish">ES — Español</option>
+    <option value="Portuguese">PT — Português</option>
+    <option value="French">FR — Français</option>
+    <option value="Arabic">AR — العربية</option>
+    <option value="Hindi">HI — हिन्दी</option>
+    <option value="Mandarin Chinese">ZH — 中文</option>
+  </select>
+</header>
+
+<section class="hero">
+  <div>
+    <div class="kicker">World Cup 2026 · Match Day Operations</div>
+    <h1 class="display">Every fan finds<br>their <span>way in.</span></h1>
+    <p>Pitchside is a GenAI companion for stadium navigation, multilingual help, accessibility, and live crowd intelligence — built for fans, volunteers, and venue staff during tournament operations.</p>
+    <div class="cta-row">
+      <button class="btn btn-primary" onclick="document.getElementById('assistant').scrollIntoView()">Try the assistant</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('ops').scrollIntoView()">View live ops radar</button>
+    </div>
+  </div>
+  <div class="board">
+    <div class="board-row"><span class="board-label mono">Gate 4 — North</span><span class="board-value warn"><span class="pulse warn"></span>Congested</span></div>
+    <div class="board-row"><span class="board-label mono">Gate 12 — East</span><span class="board-value ok"><span class="pulse ok"></span>Clear</span></div>
+    <div class="board-row"><span class="board-label mono">Accessible Lift B</span><span class="board-value high"><span class="pulse high"></span>Out of service</span></div>
+    <div class="board-row"><span class="board-label mono">Avg. queue — Concessions L2</span><span class="board-value mono">6 min</span></div>
+    <div class="board-row"><span class="board-label mono">Languages active now</span><span class="board-value mono">11</span></div>
+  </div>
+</section>
+
+<section id="assistant">
+  <div class="section-head">
+    <span class="section-num">01</span>
+    <h2 class="display">Ask Pitchside</h2>
+  </div>
+  <p class="section-sub">Fans and staff ask in their own language — Pitchside answers using live venue context: gates, accessibility routes, transport, and translated wayfinding.</p>
+
+  <div class="chat-wrap">
+    <div class="chat-panel">
+      <div class="chat-log" id="chatLog">
+        <div class="msg bot"><span class="tag">Pitchside</span>Welcome to Pitchside. Ask me about gates, seating, accessible routes, transport, or anything else at the stadium today — I can answer in your language.</div>
+      </div>
+      <div class="chat-input-row">
+        <input type="text" id="chatInput" placeholder="e.g. Where is the nearest accessible restroom to Section 114?" onkeydown="if(event.key==='Enter')sendMessage()">
+        <button id="sendBtn" onclick="sendMessage()">Ask</button>
+      </div>
+    </div>
+
+    <div class="side-panel">
+      <div class="mode-card">
+        <h4>Assistance mode</h4>
+        <div class="toggle-row">
+          <span>Accessibility mode</span>
+          <div class="switch" id="accessSwitch" onclick="toggleAccess()"></div>
+        </div>
+        <div class="toggle-row">
+          <span>Volunteer / staff view</span>
+          <div class="switch" id="staffSwitch" onclick="toggleStaff()"></div>
+        </div>
+      </div>
+      <div class="mode-card">
+        <h4>Quick questions</h4>
+        <button class="quick-q" onclick="askQuick(this)">Nearest wheelchair-accessible entrance?</button>
+        <button class="quick-q" onclick="askQuick(this)">How do I get to Gate 12 from the metro?</button>
+        <button class="quick-q" onclick="askQuick(this)">Where can I refill water bottles?</button>
+        <button class="quick-q" onclick="askQuick(this)">What do I do if I lose my child in the crowd?</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="ops">
+  <div class="section-head">
+    <span class="section-num">02</span>
+    <h2 class="display">Live Ops Radar</h2>
+  </div>
+  <p class="section-sub">Volunteers and staff report conditions in plain language. Pitchside clusters reports into a live hotspot map organizers can act on in seconds.</p>
+
+  <div class="radar-wrap">
+    <div class="radar-box">
+      <div class="stadium-oval"></div>
+      <div class="hotspot warn" style="top:30%; left:38%;"></div>
+      <div class="hotspot high" style="top:62%; left:70%;"></div>
+      <div class="hotspot ok" style="top:22%; left:68%;"></div>
+      <div class="hotspot ok" style="top:75%; left:32%;"></div>
+      <div class="hotspot warn" style="top:50%; left:20%;"></div>
+      <div class="radar-caption">LIVE · updated from volunteer + staff reports</div>
+    </div>
+
+    <div class="report-log">
+      <h4>Recent reports</h4>
+      <div id="reportList">
+        <div class="report-item"><span class="loc">Gate 4, North Concourse</span><span class="time mono">2m ago</span><br>Heavy congestion, fans backing onto the plaza.</div>
+        <div class="report-item"><span class="loc">Lift B, East Stand</span><span class="time mono">6m ago</span><br>Accessible lift out of service — rerouting to Lift C.</div>
+        <div class="report-item"><span class="loc">Gate 12, East Concourse</span><span class="time mono">11m ago</span><br>Flow is clear, short queue at bag check.</div>
+      </div>
+      <div class="report-form">
+        <input type="text" id="reportInput" placeholder="Report a condition (e.g. 'Gate 7 crowded')">
+        <button onclick="submitReport()">Log</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="capabilities">
+  <div class="section-head">
+    <span class="section-num">03</span>
+    <h2 class="display">Built for match day</h2>
+  </div>
+  <div class="grid3">
+    <div class="feat">
+      <div class="num mono">→ Navigation</div>
+      <h3>Wayfinding, translated</h3>
+      <p>Turn stadium maps and signage into conversational directions in the fan's own language, including accessible routes.</p>
+    </div>
+    <div class="feat">
+      <div class="num mono">→ Crowd Intelligence</div>
+      <h3>Reports become a map</h3>
+      <p>Free-text reports from staff and volunteers are clustered by GenAI into a live hotspot view for organizers.</p>
+    </div>
+    <div class="feat">
+      <div class="num mono">→ Accessibility</div>
+      <h3>Built-in, not bolted on</h3>
+      <p>Simplified language, larger text, and voice-friendly responses for elderly and disabled fans, on by default when needed.</p>
+    </div>
+    <div class="feat">
+      <div class="num mono">→ Multilingual</div>
+      <h3>11+ languages, live</h3>
+      <p>No app download, no language pack — fans type in whatever language they speak, staff read it in theirs.</p>
+    </div>
+    <div class="feat">
+      <div class="num mono">→ Transport</div>
+      <h3>Metro, shuttle, rideshare</h3>
+      <p>Real-time-style guidance on the fastest way in and out, factoring current congestion at each gate.</p>
+    </div>
+    <div class="feat">
+      <div class="num mono">→ Operational Intelligence</div>
+      <h3>A dashboard organizers trust</h3>
+      <p>Every hotspot on the radar traces back to a real report — no black box, full transparency for ops teams.</p>
+    </div>
+  </div>
+</section>
+
+<footer>
+  PITCHSIDE — PROMPTWARS VIRTUAL · CHALLENGE 4: SMART STADIUMS &amp; TOURNAMENT OPERATIONS
+</footer>
+
+<script>
+let accessMode = false;
+let staffMode = false;
+
+function toggleAccess(){
+  accessMode = !accessMode;
+  document.getElementById('accessSwitch').classList.toggle('on', accessMode);
+}
+function toggleStaff(){
+  staffMode = !staffMode;
+  document.getElementById('staffSwitch').classList.toggle('on', staffMode);
+}
+function askQuick(btn){
+  document.getElementById('chatInput').value = btn.textContent;
+  sendMessage();
+}
+
+async function sendMessage(){
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const log = document.getElementById('chatLog');
+  const lang = document.getElementById('langSelect').value;
+
+  const userMsg = document.createElement('div');
+  userMsg.className = 'msg user';
+  userMsg.textContent = text;
+  log.appendChild(userMsg);
+  input.value = '';
+  log.scrollTop = log.scrollHeight;
+
+  const sendBtn = document.getElementById('sendBtn');
+  sendBtn.disabled = true;
+
+  const thinking = document.createElement('div');
+  thinking.className = 'msg bot';
+  thinking.innerHTML = '<span class="tag">Pitchside</span>Thinking…';
+  log.appendChild(thinking);
+  log.scrollTop = log.scrollHeight;
+
+  let systemPrompt = `You are Pitchside, a helpful stadium assistant for fans and staff at a FIFA World Cup 2026 venue during tournament operations. Answer the question directly and concisely (2-4 sentences), as if you have live knowledge of gates, sections, accessible routes, restrooms, water refill stations, lost-and-found, and transport options. Invent plausible, consistent stadium details (gate numbers, section names, walking times) since this is a demo. Respond in ${lang}.`;
+  if(accessMode){
+    systemPrompt += " The user has accessibility mode on: use short sentences, simple words, and a calm, clear tone. Prioritize step-free and accessible options.";
+  }
+  if(staffMode){
+    systemPrompt += " The user is a volunteer or staff member, not a fan: give operational, action-oriented answers (what to check, who to notify, standard procedure).";
+  }
+
+  try{
+    const response = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ systemPrompt, message: text })
+    });
+    const data = await response.json();
+    const reply = data.reply || "I couldn't find an answer to that — try asking about gates, accessibility, or transport.";
+    thinking.innerHTML = '<span class="tag">Pitchside</span>' + reply.replace(/</g,"&lt;");
+  }catch(err){
+    thinking.innerHTML = '<span class="tag">Pitchside</span>Sorry, I couldn\'t reach the assistant just now. Please try again.';
+  }
+  sendBtn.disabled = false;
+  log.scrollTop = log.scrollHeight;
+}
+
+function submitReport(){
+  const input = document.getElementById('reportInput');
+  const text = input.value.trim();
+  if(!text) return;
+  const list = document.getElementById('reportList');
+  const item = document.createElement('div');
+  item.className = 'report-item';
+  item.innerHTML = `<span class="loc">Reported</span><span class="time mono">just now</span><br>${text.replace(/</g,"&lt;")}`;
+  list.insertBefore(item, list.firstChild);
+  input.value = '';
+}
+</script>
+
+</body>
+</html>

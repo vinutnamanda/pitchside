@@ -1,0 +1,16 @@
+{
+  "name": "pitchside-stadium-companion",
+  "version": "1.0.0",
+  "description": "GenAI-powered stadium companion for FIFA World Cup 2026 tournament operations — PromptWars Virtual Challenge 4 submission",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "dotenv": "^16.4.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
